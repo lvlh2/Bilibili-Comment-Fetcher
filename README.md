@@ -15,6 +15,6 @@
 
 ## 结果示例
 
-输出结果包含5列，分别为`用户名称`、`用户性别`、`评论内容`、`点赞数`、`评论回复`
+输出结果包含5列，分别为`用户名称`、`用户性别`、`评论内容`、`点赞数`和`评论回复`
 
 ![example](https://github.com/lvlh2/BilibiliCommentFetcher/blob/main/example.png)
