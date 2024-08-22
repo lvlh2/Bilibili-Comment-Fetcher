@@ -1,6 +1,6 @@
 # Bilibili Comments Fetcher
 
-主要基于`requests`库，通过Bilibili的评论api爬取视频评论以及评论回复数据
+主要基于`requests`库，通过Bilibili的评论api爬取视频评论、点赞数以及评论回复
 
 ## 使用方法
 
