@@ -4,6 +4,8 @@
 @File: fetch_bilibili_comments.py
 @Time: 2024/08/21 14:15:06
 @Author: lvlh2
+
+Please configure your Cookie in the variable `HEADERS` in line 23.
 """
 
 
