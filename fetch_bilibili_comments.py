@@ -3,7 +3,7 @@
 """
 @File: fetch_bilibili_comments.py
 @Time: 2024/08/21 14:15:06
-@Author: Linhan Lv
+@Author: lvlh2
 """
 
 
@@ -18,6 +18,7 @@ import requests
 from lxml import etree
 
 HEADERS = {
+    # 'cookie': 'Your Cookie',
     'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36 Edg/127.0.0.0',
 }
 
@@ -141,7 +142,12 @@ class BilibiliCommentFetcher:
 
         comments = [
             {
-                data['data']['replies'][i]['content']['message']: [
+                (
+                    data['data']['replies'][i]['member']['uname'],
+                    data['data']['replies'][i]['member']['sex'],
+                    data['data']['replies'][i]['content']['message'],
+                    data['data']['replies'][i]['like'],
+                ): [
                     data['data']['replies'][i]['replies'][j]['content']['message']
                     for j in range(len(data['data']['replies'][i]['replies']))
                 ]
@@ -179,7 +185,12 @@ class BilibiliCommentFetcher:
         data = response.json()
         comments = [
             {
-                data['data']['replies'][i]['content']['message']: [
+                (
+                    data['data']['replies'][i]['member']['uname'],
+                    data['data']['replies'][i]['member']['sex'],
+                    data['data']['replies'][i]['content']['message'],
+                    data['data']['replies'][i]['like'],
+                ): [
                     data['data']['replies'][i]['replies'][j]['content']['message']
                     for j in range(len(data['data']['replies'][i]['replies']))
                 ]
@@ -193,7 +204,6 @@ def main():
     path = os.path.dirname(__file__)
     os.chdir(path)
 
-    # title = '魔女的夜宴 官方中文版开场动画'
     title = input('Please input the title of the video:')
     fetcher = BilibiliCommentFetcher(title=title)
 
@@ -212,10 +222,6 @@ def main():
     next_offset = next_offset.replace('"', r'\"')
     pagination_str = f'{{"offset":"{next_offset}"}}'
 
-    # NOTE: Test with page 2.
-    # w_rid = fetcher.get_w_rid(oid=oid, pagination_str=pagination_str)
-    # fetcher.fetch_comments(oid=oid, w_rid=w_rid, pagination_str=pagination_str)
-
     page = 1
     while True:
         w_rid = fetcher.get_w_rid(oid=oid, pagination_str=pagination_str)
@@ -229,12 +235,12 @@ def main():
             print(f'Page {page}: {len(comments)} comments fetched.')
             page += 1
 
-        time.sleep(0.2)
+        time.sleep(0.1)
 
     total_comments = pd.concat(map(pd.Series, total_comments), axis=0)
-    total_comments.explode().rename_axis('Comments').rename('Replies').to_csv(
-        f'{title}_comments.csv'
-    )
+    total_comments.explode().rename_axis(
+        ['User Name', 'Sex', 'Comments', 'Likes']
+    ).rename('Replies').to_csv(f'{title}_comments.csv')
 
 
 if __name__ == '__main__':
