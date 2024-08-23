@@ -21,7 +21,7 @@ from lxml import etree
 
 # NOTE: Please configure your Cookie here.
 HEADERS = {
-    'cookie': 'Your Cookie',
+    'cookie': "Your Cookie",
     'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36 Edg/127.0.0.0',
 }
 
@@ -33,13 +33,9 @@ class BilibiliCommentFetcher:
     comment_api = 'https://api.bilibili.com/x/v2/reply/wbi/main'
     a = 'ea1db124af3c7062474693fa704f4ff8'
 
-    def __init__(self, title: str) -> None:
-        """Initializes a new BilibiliCommentFetcher instance.
-
-        Args:
-            title (str): The title of the video.
-        """
+    def __init__(self, title: str = None, video_url: str = None) -> None:
         self.title = title
+        self.video_url = video_url
 
     def get_video_url(self) -> str:
         """Gets the URL of the video.
@@ -56,19 +52,34 @@ class BilibiliCommentFetcher:
         href = 'https:' + tree.xpath(xpath)[0]
         return href
 
-    def get_oid(self, video_url: str) -> str:
-        """Gets the oid of the video.
-
-        Args:
-            video_url (str): The URL of the video.
+    def get_title(self) -> str:
+        """Gets the title of the video.
 
         Returns:
-            str: The oid of the video.
+            str: The title of the video.
         """
-        response = requests.get(video_url, headers=HEADERS)
+        response = requests.get(self.video_url, headers=HEADERS)
+
+        tree = etree.HTML(response.text)
+        xpath = '//title[@data-vue-meta="true"]/text()'
+        title = tree.xpath(xpath)[0].split('_', maxsplit=1)[0]
+        return title
+
+    def get_oid(self) -> str:
+        """Gets the oid of the video.
+
+        Raises:
+            CookieError: If the cookie is invalid or expired.
+
+        Returns:
+            str: The oid of the video."""
+        response = requests.get(self.video_url, headers=HEADERS)
 
         pat = re.compile(r'&oid=(\d+)')
-        oid = pat.search(response.text).group(1)
+        try:
+            oid = pat.search(response.text).group(1)
+        except AttributeError:
+            raise CookieError('Cookie is invalid or expired, please reconfigure it.')
         return oid
 
     def get_w_rid(self, oid: str, pagination_str: str = '{"offset":""}') -> str:
@@ -203,16 +214,31 @@ class BilibiliCommentFetcher:
         return comments
 
 
+class CookieError(Exception):
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+
+
 def main():
     path = os.path.dirname(__file__)
     os.chdir(path)
 
-    title = input('Please input the title of the video:')
-    fetcher = BilibiliCommentFetcher(title=title)
+    title_or_link = input('Please input the title or the link of the video:')
+    try:
+        requests.get(title_or_link)
+        fetcher = BilibiliCommentFetcher(video_url=title_or_link)
+    except:
+        fetcher = BilibiliCommentFetcher(title=title_or_link)
+        fetcher.video_url = fetcher.get_video_url()
 
-    video_url = fetcher.get_video_url()
+    fetcher.title = fetcher.get_title()
+    print(f'Video found: {fetcher.title}.')
+    flag = input('Type in "y" to continue, "n" to exit:')
+    if flag == 'n':
+        exit()
 
-    oid = fetcher.get_oid(video_url=video_url)
+    oid = fetcher.get_oid()
 
     # NOTE: Page 1.
     w_rid = fetcher.get_w_rid(oid=oid)
@@ -221,11 +247,14 @@ def main():
         oid=oid, w_rid=w_rid
     )
     total_comments = comments_page_1
+    print(f'Page 1: {len(total_comments)} comments fetched.')
 
+    # NOTE: Pages after page 1.
     next_offset = next_offset.replace('"', r'\"')
     pagination_str = f'{{"offset":"{next_offset}"}}'
 
-    page = 1
+    page = 2
+    comments_ = None
     while True:
         w_rid = fetcher.get_w_rid(oid=oid, pagination_str=pagination_str)
         comments = fetcher.fetch_comments(
@@ -233,17 +262,20 @@ def main():
         )
         if len(comments) == 0:
             break
+        elif comments == comments_:
+            raise CookieError('Cookie is invalid or expired, please reconfigure it.')
         else:
             total_comments.extend(comments)
             print(f'Page {page}: {len(comments)} comments fetched.')
             page += 1
 
+        comments_ = comments
         time.sleep(0.1)
 
     total_comments = pd.concat(map(pd.Series, total_comments), axis=0)
     total_comments.explode().rename_axis(
         ['User Name', 'Sex', 'Comments', 'Likes']
-    ).rename('Replies').to_csv(f'{title}_comments.csv')
+    ).rename('Replies').to_csv(f'{fetcher.title}_comments.csv')
 
 
 if __name__ == '__main__':
