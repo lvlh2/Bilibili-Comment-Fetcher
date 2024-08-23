@@ -224,7 +224,7 @@ def main():
     path = os.path.dirname(__file__)
     os.chdir(path)
 
-    title_or_link = input('Please input the title or the link of the video:')
+    title_or_link = input('Please input the title or the link of the video: ')
     try:
         requests.get(title_or_link)
         fetcher = BilibiliCommentFetcher(video_url=title_or_link)
@@ -234,7 +234,7 @@ def main():
 
     fetcher.title = fetcher.get_title()
     print(f'Video found: {fetcher.title}.')
-    flag = input('Type in "y" to continue, "n" to exit:')
+    flag = input('Type in "y" to continue, "n" to exit: ')
     if flag == 'n':
         exit()
 
