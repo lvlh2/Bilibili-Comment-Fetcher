@@ -26,6 +26,12 @@ HEADERS = {
 }
 
 
+class CookieError(Exception):
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+
+
 class BilibiliCommentFetcher:
     """Fetches and stores Bilibili comments using the Bilibili API."""
 
@@ -212,12 +218,6 @@ class BilibiliCommentFetcher:
             for i in range(len(data['data']['replies']))
         ]
         return comments
-
-
-class CookieError(Exception):
-
-    def __init__(self, message: str) -> None:
-        super().__init__(message)
 
 
 def main():
